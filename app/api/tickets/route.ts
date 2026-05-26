@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   try {
     // 1. Structural Guard Check: Ensure support target configuration parameters exist in memory
     if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SHEET_ID || !process.env.SUPPORT_TEAM_EMAIL) {
-      console.error("🚨 CONFIGURATION FAILURE: Missing variables inside .env.local matrix.");
+      console.error("🚨 CONFIGURATION FAILURE: Missing variables inside environment matrix.");
       return NextResponse.json(
         { success: false, error: "System authentication variables are missing on the hosting platform." }, 
         { status: 500 }
@@ -42,10 +42,15 @@ export async function POST(request: Request) {
     const datesSeparated = items.map((i: any) => i.purchaseDate).join(', ');
     const coordinateString = coordinates ? `${coordinates.lat.toFixed(6)}, ${coordinates.lng.toFixed(6)}` : 'Not Provided';
 
-    // 5. Initialize Google Sheets Secure JWT Access Handshake (Using Your Working Object Syntax)
+    // 5. Initialize Google Sheets Secure JWT Access Handshake (With Safe Compilation Fallbacks)
+    const clientEmail = process.env.GOOGLE_CLIENT_EMAIL?.replace(/^['"]|['"]$/g, '') || '';
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n').replace(/^['"]|['"]$/g, '') || '';
+    const targetSpreadsheetId = process.env.GOOGLE_SHEET_ID?.replace(/^['"]|['"]$/g, '') || '';
+    const supportEmail = process.env.SUPPORT_TEAM_EMAIL?.replace(/^['"]|['"]$/g, '') || '';
+
     const auth = new google.auth.JWT({
-      email: process.env.GOOGLE_CLIENT_EMAIL.replace(/^['"]|['"]$/g, ''),
-      key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n').replace(/^['"]|['"]$/g, ''),
+      email: clientEmail,
+      key: privateKey,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
     });
 
@@ -54,7 +59,7 @@ export async function POST(request: Request) {
     // 6. Append System Diagnostics directly to the sheet database ledger matrix (Columns A to P)
     await sheets.spreadsheets.values.append({
       auth, 
-      spreadsheetId: process.env.GOOGLE_SHEET_ID.replace(/^['"]|['"]$/g, ''),
+      spreadsheetId: targetSpreadsheetId,
       range: 'Sheet1!A:P',
       valueInputOption: 'USER_ENTERED',
       requestBody: {
@@ -134,7 +139,7 @@ export async function POST(request: Request) {
               </thead>
               <tbody>${tableRowsHtml}</tbody>
             </table>
-            <p style="font-size: 12px; color: #64748b; margin-top: 20px;">A service representative from our field operations desk will evaluate this profile parameters and contact you shortly.</p>
+            <p style="font-size: 12px; color: #64748b; margin-top: 20px;">A service representative from our field operations desk will evaluate these profile parameters and contact you shortly.</p>
           </div>
         </div>
       `,
@@ -143,7 +148,7 @@ export async function POST(request: Request) {
     // 9. EMAIL CONFIGURATION B: Internal High-Priority Action Alert for your Support Team
     const supportMailOptions = {
       from: `"Portal Action Dispatcher" <${process.env.SMTP_EMAIL}>`,
-      to: process.env.SUPPORT_TEAM_EMAIL.replace(/^['"]|['"]$/g, ''),
+      to: supportEmail,
       subject: `🚨 CRITICAL SERVICE REQUIRED: [${ticketId}] - ${customerName}`,
       text: `NEW INCIDENT DISPATCH URGENT\n\nTicket: ${ticketId}\nCustomer: ${customerName}\nPhone: ${customerNo}\nProblem: ${problemInSystem}\nAddress: ${address}`,
       html: `
